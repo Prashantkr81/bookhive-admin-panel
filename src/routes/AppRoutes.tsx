@@ -12,6 +12,7 @@ import UserDetailsPage from "../pages/Users/UserDetailsPage";
 
 import ProtectedRoute from "./ProtectedRoute";
 import AdminLayout from "../layouts/AdminLayout";
+import BooksPage from "../pages/Books/BooksPage";
 
 export default function AppRoutes() {
   return (
@@ -64,9 +65,9 @@ export default function AppRoutes() {
             {/* Other modules */}
             <Route
               path="books"
-              element={<div>Books</div>}
+              element={<BooksPage />}
             />
-
+    
             <Route
               path="rentals"
               element={<div>Rentals</div>}
