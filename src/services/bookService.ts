@@ -3,6 +3,8 @@ import {
   doc,
   getDoc,
   getDocs,
+  query,
+  where,
 } from "firebase/firestore";
 
 import { db } from "../firebase/config";
@@ -22,6 +24,27 @@ export interface Book {
   createdAt: string | null;
   category: string | null;
   condition: string | null;
+}
+
+export interface BookOwner {
+  id: string;
+  name: string;
+  email: string;
+  photoURL: string | null;
+}
+
+export interface BookRental {
+  id: string;
+  userId: string;
+  ownerId: string;
+  bookId: string;
+  title: string;
+  author: string;
+  price: number;
+  rentedAt: string | null;
+  returnDate: string | null;
+  actualReturnDate: string | null;
+  status: string;
 }
 
 function mapBook(
@@ -92,4 +115,85 @@ export async function getBookById(
   }
 
   return mapBook(snapshot);
+}
+
+export async function getBookOwner(
+  ownerId: string
+): Promise<BookOwner | null> {
+  if (!ownerId) {
+    return null;
+  }
+
+  const snapshot = await getDoc(
+    doc(db, "users", ownerId)
+  );
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  const data = snapshot.data();
+
+  return {
+    id: snapshot.id,
+    name: data.name ?? "Unknown User",
+    email: data.email ?? "—",
+    photoURL:
+      data.photoURL ?? null,
+  };
+}
+
+export async function getBookRentals(
+  bookId: string
+): Promise<BookRental[]> {
+  const rentalsQuery = query(
+    collection(db, "rentals"),
+    where("bookId", "==", bookId)
+  );
+
+  const snapshot = await getDocs(
+    rentalsQuery
+  );
+
+  return snapshot.docs
+    .map((document) => {
+      const data = document.data();
+
+      return {
+        id: document.id,
+        userId: data.userId ?? "",
+        ownerId: data.ownerId ?? "",
+        bookId: data.bookId ?? "",
+        title: data.title ?? "Unknown Book",
+        author:
+          data.author ?? "Unknown Author",
+        price: Number(data.price ?? 0),
+        rentedAt:
+          typeof data.rentedAt === "string"
+            ? data.rentedAt
+            : null,
+        returnDate:
+          typeof data.returnDate === "string"
+            ? data.returnDate
+            : null,
+        actualReturnDate:
+          typeof data.actualReturnDate ===
+          "string"
+            ? data.actualReturnDate
+            : null,
+        status:
+          data.status ?? "unknown",
+      };
+    })
+    .sort((a, b) => {
+      const dateA = a.rentedAt
+        ? new Date(a.rentedAt).getTime()
+        : 0;
+
+      const dateB = b.rentedAt
+        ? new Date(b.rentedAt).getTime()
+        : 0;
+
+      return dateB - dateA;
+    });
 }
