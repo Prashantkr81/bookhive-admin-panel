@@ -13,6 +13,7 @@ import UserDetailsPage from "../pages/Users/UserDetailsPage";
 import ProtectedRoute from "./ProtectedRoute";
 import AdminLayout from "../layouts/AdminLayout";
 import BooksPage from "../pages/Books/BooksPage";
+import BookDetailsPage from "../pages/Books/BookDetailsPage";
 
 export default function AppRoutes() {
   return (
@@ -66,6 +67,11 @@ export default function AppRoutes() {
             <Route
               path="books"
               element={<BooksPage />}
+            />
+
+            <Route
+              path="books/:bookId"
+              element={<BookDetailsPage />}
             />
     
             <Route
