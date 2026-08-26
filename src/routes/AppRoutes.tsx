@@ -18,6 +18,7 @@ import RentalsPage from "../pages/Rentals/RentalsPage";
 import RentalDetailsPage from "../pages/Rentals/RentalDetailsPage";
 import NotificationsPage from "../pages/Notifications/NotificationsPage";
 import NotificationsDetailsPage from "../pages/Notifications/NotificationDetailsPage";
+import AnalyticsPage from "../pages/Analytics/AnalyticsPage";
 
 export default function AppRoutes() {
   return (
@@ -100,7 +101,7 @@ export default function AppRoutes() {
 
             <Route
               path="analytics"
-              element={<div>Analytics</div>}
+              element={<AnalyticsPage />}
             />
 
             <Route
