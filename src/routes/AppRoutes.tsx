@@ -17,6 +17,7 @@ import BookDetailsPage from "../pages/Books/BookDetailsPage";
 import RentalsPage from "../pages/Rentals/RentalsPage";
 import RentalDetailsPage from "../pages/Rentals/RentalDetailsPage";
 import NotificationsPage from "../pages/Notifications/NotificationsPage";
+import NotificationsDetailsPage from "../pages/Notifications/NotificationDetailsPage";
 
 export default function AppRoutes() {
   return (
@@ -90,6 +91,11 @@ export default function AppRoutes() {
             <Route
               path="notifications"
               element={< NotificationsPage/>}
+            />
+
+            <Route
+              path="notifications/:notificationId"
+              element={<NotificationsDetailsPage />}
             />
 
             <Route
