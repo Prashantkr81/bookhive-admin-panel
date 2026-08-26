@@ -1,201 +1,283 @@
 import {
   collection,
   getDocs,
+  limit,
+  orderBy,
+  query,
 } from "firebase/firestore";
 
 import { db } from "../firebase/config";
 
-export interface DashboardStats {
+export interface DashboardUser {
+  id: string;
+  name: string;
+  email: string;
+  photoURL: string | null;
+  createdAt: string | null;
+}
+
+export interface DashboardRental {
+  id: string;
+  title: string;
+  author: string;
+  userId: string;
+  price: number;
+  rentedAt: string | null;
+  returnDate: string | null;
+  status: string;
+}
+
+export interface DashboardData {
   totalUsers: number;
   totalBooks: number;
   availableBooks: number;
   rentedBooks: number;
+  totalRentals: number;
   activeRentals: number;
   overdueRentals: number;
+  unreadNotifications: number;
+
+  recentUsers: DashboardUser[];
+  recentRentals: DashboardRental[];
 }
 
-export interface RecentUser {
-  id: string;
-  name: string;
-  email: string;
-  createdAt: string | null;
-}
-
-export interface RecentRental {
-  id: string;
-  userId: string;
-  ownerId: string;
-  bookId: string;
-  title: string;
-  author: string;
-  image: string | null;
-  price: number;
-  rentedAt: string | null;
-  returnDate: string | null;
-  actualReturnDate: string | null;
-  status: string;
-}
-
-function toDate(value: unknown): Date | null {
+function toDateString(
+  value: any
+): string | null {
   if (!value) {
     return null;
   }
 
-  if (value instanceof Date) {
+  if (typeof value === "string") {
     return value;
   }
 
-  if (typeof value === "string") {
-    const date = new Date(value);
-
-    return Number.isNaN(date.getTime())
-      ? null
-      : date;
+  if (
+    typeof value.toDate === "function"
+  ) {
+    return value.toDate().toISOString();
   }
 
   return null;
 }
 
-export async function getDashboardStats(): Promise<DashboardStats> {
+function isActive(
+  status: string
+) {
+  return (
+    status === "active" ||
+    status === "rented"
+  );
+}
+
+function isOverdue(
+  status: string,
+  returnDate: string | null
+) {
+  if (!isActive(status)) {
+    return false;
+  }
+
+  if (!returnDate) {
+    return false;
+  }
+
+  const date =
+    new Date(returnDate);
+
+  return (
+    !Number.isNaN(date.getTime()) &&
+    date < new Date()
+  );
+}
+
+export async function getDashboardData(): Promise<DashboardData> {
   const [
     usersSnapshot,
     booksSnapshot,
     rentalsSnapshot,
+    notificationsSnapshot,
   ] = await Promise.all([
-    getDocs(collection(db, "users")),
-    getDocs(collection(db, "books")),
-    getDocs(collection(db, "rentals")),
+    getDocs(
+      collection(db, "users")
+    ),
+
+    getDocs(
+      collection(db, "books")
+    ),
+
+    getDocs(
+      collection(db, "rentals")
+    ),
+
+    getDocs(
+      collection(db, "notifications")
+    ),
   ]);
 
-  const books = booksSnapshot.docs.map((doc) => doc.data());
+  const users =
+    usersSnapshot.docs
+      .map((document) => {
+        const data =
+          document.data();
 
-  const rentals = rentalsSnapshot.docs.map((doc) => doc.data());
+        return {
+          id: document.id,
+          name:
+            data.name ??
+            "Unknown User",
+          email:
+            data.email ?? "—",
+          photoURL:
+            data.photoURL ??
+            null,
+          createdAt:
+            toDateString(
+              data.createdAt
+            ),
+        };
+      })
+      .sort((a, b) => {
+        const dateA = a.createdAt
+          ? new Date(
+              a.createdAt
+            ).getTime()
+          : 0;
 
-  const availableBooks = books.filter(
-    (book) => book.isAvailable === true
-  ).length;
+        const dateB = b.createdAt
+          ? new Date(
+              b.createdAt
+            ).getTime()
+          : 0;
 
-  const rentedBooks = books.filter(
-    (book) => book.isAvailable === false
-  ).length;
+        return dateB - dateA;
+      });
 
-  const activeRentals = rentals.filter(
-    (rental) =>
-      rental.status === "active" ||
-      rental.status === "rented"
-  ).length;
+  const books =
+    booksSnapshot.docs.map(
+      (document) =>
+        document.data()
+    );
 
-  const now = new Date();
+  const rentals =
+    rentalsSnapshot.docs
+      .map((document) => {
+        const data =
+          document.data();
 
-  const overdueRentals = rentals.filter(
-    (rental) => {
-      const isActive =
-        rental.status === "active" ||
-        rental.status === "rented";
+        return {
+          id: document.id,
 
-      if (!isActive) {
-        return false;
-      }
+          title:
+            data.title ??
+            "Unknown Book",
 
-      const returnDate =
-        toDate(rental.returnDate);
+          author:
+            data.author ??
+            "Unknown Author",
 
-      if (!returnDate) {
-        return false;
-      }
+          userId:
+            data.userId ?? "",
 
-      return returnDate < now;
-    }
-  ).length;
+          price:
+            Number(
+              data.price ?? 0
+            ),
+
+          rentedAt:
+            toDateString(
+              data.rentedAt
+            ),
+
+          returnDate:
+            toDateString(
+              data.returnDate
+            ),
+
+          status:
+            data.status ??
+            "unknown",
+        };
+      })
+      .sort((a, b) => {
+        const dateA = a.rentedAt
+          ? new Date(
+              a.rentedAt
+            ).getTime()
+          : 0;
+
+        const dateB = b.rentedAt
+          ? new Date(
+              b.rentedAt
+            ).getTime()
+          : 0;
+
+        return dateB - dateA;
+      });
+
+  const notifications =
+    notificationsSnapshot.docs.map(
+      (document) =>
+        document.data()
+    );
+
+  const availableBooks =
+    books.filter(
+      (book) =>
+        book.isAvailable === true
+    ).length;
+
+  const rentedBooks =
+    books.filter(
+      (book) =>
+        book.isAvailable !== true
+    ).length;
+
+  const activeRentals =
+    rentals.filter(
+      (rental) =>
+        isActive(
+          rental.status
+        )
+    ).length;
+
+  const overdueRentals =
+    rentals.filter(
+      (rental) =>
+        isOverdue(
+          rental.status,
+          rental.returnDate
+        )
+    ).length;
 
   return {
-    totalUsers: usersSnapshot.size,
-    totalBooks: booksSnapshot.size,
+    totalUsers:
+      usersSnapshot.size,
+
+    totalBooks:
+      booksSnapshot.size,
+
     availableBooks,
+
     rentedBooks,
+
+    totalRentals:
+      rentalsSnapshot.size,
+
     activeRentals,
+
     overdueRentals,
+
+    unreadNotifications:
+      notifications.filter(
+        (notification) =>
+          notification.read !== true
+      ).length,
+
+    recentUsers:
+      users.slice(0, 5),
+
+    recentRentals:
+      rentals.slice(0, 5),
   };
-}
-
-export async function getRecentUsers(
-  count = 5
-): Promise<RecentUser[]> {
-  const snapshot = await getDocs(
-    collection(db, "users")
-  );
-
-  const users = snapshot.docs.map((doc) => {
-    const data = doc.data();
-
-    return {
-      id: doc.id,
-      name: data.name ?? "Unknown",
-      email: data.email ?? "—",
-      createdAt:
-        typeof data.createdAt === "string"
-          ? data.createdAt
-          : null,
-    };
-  });
-
-  return users
-    .sort((a, b) => {
-      const dateA =
-        toDate(a.createdAt)?.getTime() ?? 0;
-
-      const dateB =
-        toDate(b.createdAt)?.getTime() ?? 0;
-
-      return dateB - dateA;
-    })
-    .slice(0, count);
-}
-
-export async function getRecentRentals(
-  count = 5
-): Promise<RecentRental[]> {
-  const snapshot = await getDocs(
-    collection(db, "rentals")
-  );
-
-  const rentals = snapshot.docs.map((doc) => {
-    const data = doc.data();
-
-    return {
-      id: doc.id,
-      userId: data.userId ?? "",
-      ownerId: data.ownerId ?? "",
-      bookId: data.bookId ?? "",
-      title: data.title ?? "Unknown Book",
-      author: data.author ?? "Unknown Author",
-      image: data.image ?? null,
-      price: Number(data.price ?? 0),
-      rentedAt:
-        typeof data.rentedAt === "string"
-          ? data.rentedAt
-          : null,
-      returnDate:
-        typeof data.returnDate === "string"
-          ? data.returnDate
-          : null,
-      actualReturnDate:
-        typeof data.actualReturnDate === "string"
-          ? data.actualReturnDate
-          : null,
-      status: data.status ?? "unknown",
-    };
-  });
-
-  return rentals
-    .sort((a, b) => {
-      const dateA =
-        toDate(a.rentedAt)?.getTime() ?? 0;
-
-      const dateB =
-        toDate(b.rentedAt)?.getTime() ?? 0;
-
-      return dateB - dateA;
-    })
-    .slice(0, count);
 }
