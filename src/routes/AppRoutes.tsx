@@ -15,6 +15,8 @@ import AdminLayout from "../layouts/AdminLayout";
 import BooksPage from "../pages/Books/BooksPage";
 import BookDetailsPage from "../pages/Books/BookDetailsPage";
 import RentalsPage from "../pages/Rentals/RentalsPage";
+import RentalDetailsPage from "../pages/Rentals/RentalDetailsPage";
+import NotificationsPage from "../pages/Notifications/NotificationsPage";
 
 export default function AppRoutes() {
   return (
@@ -81,8 +83,13 @@ export default function AppRoutes() {
             />
 
             <Route
+              path="rentals/:rentalId"
+              element={<RentalDetailsPage />}
+            />
+
+            <Route
               path="notifications"
-              element={<div>Notifications</div>}
+              element={< NotificationsPage/>}
             />
 
             <Route
